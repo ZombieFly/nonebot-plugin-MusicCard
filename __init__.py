@@ -3,6 +3,7 @@ from urllib.parse import urlparse, parse_qs
 
 from nonebot import get_driver, on_keyword
 from nonebot.adapters.onebot.v11.event import MessageEvent
+from nonebot.adapters.onebot.exception import ActionFailed
 
 from . import link2card
 
@@ -13,6 +14,8 @@ config = Config.parse_obj(global_config)
 
 KEYWORDS_MAP = config.KEYWORDS_MAP
 KEYWORDS = set(KEYWORDS_MAP.keys())
+
+INGORE_ACTIONFAILED: bool = config.INGORE_ACTIONFAILED
 
 card = on_keyword(KEYWORDS)
 
@@ -39,4 +42,10 @@ async def _(event: MessageEvent):
                     parse_result.path, parse_qs(parse_result.query))
 
                 if out:
-                    await card.send(out)
+                    try:
+                        await card.send(out)
+
+                    except ActionFailed as err:
+                        # * 忽略ActionFailed报错（可能是由于链接中的id不存在对应的音乐）
+                        if not INGORE_ACTIONFAILED:
+                            raise err
