@@ -3,19 +3,19 @@ from typing import Union
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .exceptions import NotSongShare, NoSongId
+from .data import MusicPlatform
 
 
-def ne(path: str, query: dict) -> Union[MessageSegment, str, None]:
+def common(path: str, query: dict, mp: MusicPlatform) -> Union[MessageSegment, str, None]:
 
-    mp_path = '/song'
     try:
-        if (path == mp_path) and ('id' in query):
-            return MessageSegment.music(type_='163', id_=int(query['id'][0]))
+        if (path in mp.path) and (mp.Sid_key in query):
+            return MessageSegment.music(type_=mp.type_, id_=int(query[mp.Sid_key][0]))
 
-        elif path != mp_path:
-            raise NotSongShare("网易云", mp_path)
+        elif path not in mp.path:
+            raise NotSongShare(mp.name, '、'.join(mp.path))
 
-        elif 'id' not in query:
+        elif mp.Sid_key not in query:
             raise NoSongId
 
     except (NotSongShare, NoSongId):
