@@ -35,7 +35,8 @@ async def _(event: MessageEvent):
         for url in KEYWORDS:
 
             if url in url_netloc:
-                await card.send(
-                    getattr(link2card, KEYWORDS_MAP[url])(
-                        parse_result.path, parse_qs(parse_result.query))
-                )
+                out = getattr(link2card, KEYWORDS_MAP[url])(
+                    parse_result.path, parse_qs(parse_result.query))
+
+                if out:
+                    await card.send(out)
