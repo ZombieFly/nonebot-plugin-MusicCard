@@ -42,9 +42,7 @@ async def _(event: MessageEvent):
                 logger.debug(
                     f'找到对应mp<{mp.name}>，解析路径为{str(parse_result.path)}，参数为{str(qs)}')
 
-                out = getattr(link2card, mp.model)(
-                    parse_result.path, qs, mp
-                )
+                out = link2card.handle(parse_result.path, qs, mp)
 
                 if out:
                     try:
