@@ -7,16 +7,22 @@ from .data import MusicPlatform
 
 
 class Model:
-    @staticmethod
-    def common(query: dict, mp: MusicPlatform):
-        return MessageSegment.music(type_=mp.type_, id_=int(query[mp.Sid_key][0]))
+    # 构造模型
+
+    def __init__(self, query: dict, mp: MusicPlatform) -> None:
+        self.query = query
+        self.mp = mp
+
+    def common(self) -> MessageSegment:
+        return MessageSegment.music(type_=self.mp.type_, id_=int(self.query[self.mp.Sid_key][0]))
 
 
 def handle(path: str, query: dict, mp: MusicPlatform) -> Union[MessageSegment, str, None]:
 
     try:
         if (path in mp.path) and (mp.Sid_key in query):
-            return getattr(Model, mp.model)(query, mp)
+            model = Model(query, mp)
+            return getattr(model, mp.model)()
 
         elif path not in mp.path:
             raise NotSongShare(mp.name, '、'.join(mp.path))
