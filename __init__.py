@@ -4,7 +4,7 @@ from urllib.parse import urlparse, parse_qs
 from nonebot import get_driver, on_keyword
 from nonebot.log import logger
 from nonebot.adapters.onebot.v11.event import MessageEvent
-from nonebot.adapters.onebot.exception import ActionFailed
+from nonebot.adapters.onebot.v11.exception import ActionFailed
 
 from . import link2card, data
 
@@ -21,9 +21,9 @@ card = on_keyword(KEYWORDS)
 
 
 def get_url(raw: str) -> list:
-    url = re.findall(
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', raw)
-    return url
+    urls = re.findall(
+        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', raw.replace(r'/#', '?'))
+    return urls
 
 
 @card.handle()
@@ -42,7 +42,7 @@ async def _(event: MessageEvent):
                 logger.debug(
                     f'找到对应mp<{mp.name}>，解析路径为{str(parse_result.path)}，参数为{str(qs)}')
 
-                out = link2card.handle(parse_result.path, qs, mp)
+                out = await link2card.handle(parse_result.path, qs, mp)
 
                 if out:
                     try:
