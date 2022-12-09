@@ -42,5 +42,16 @@ MPList = [
         type_='qq',
         Sid_key='songid'
 
-    )
+    ),
+
+    kg := MusicPlatform(
+        name='酷狗音乐',
+        url_feature='kugou.com',
+        model='kg',
+
+        path=['/song'],
+        type_=str(),
+        Sid_key='hash'
+
+    ),
 ]
