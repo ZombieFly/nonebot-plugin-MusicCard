@@ -23,7 +23,7 @@ class MusicPlatform(BaseModel):
 
 MPList = [
 
-    ne := MusicPlatform(
+    ne := (MusicPlatform(
         name='网易云音乐',
         url_feature='music.163.com',
         model='common',
@@ -31,20 +31,40 @@ MPList = [
         path=['/song', '/m/song'],
         type_='163',
         Sid_key='id'
-    ),
+    ),),
 
-    qq := MusicPlatform(
-        name='QQ音乐',
-        url_feature='y.qq.com',
+    qq := (MusicPlatform(
+        name='QQ音乐1',
+        url_feature='c.y.qq.com',
+        model='SPqq',
+
+        path=['/base/fcgi-bin/u'],
+        type_='qq',
+        Sid_key=''
+
+    ), MusicPlatform(
+        name='QQ音乐2',
+        url_feature='i.y.qq.com',
         model='common',
 
         path=['/v8/playsong.html'],
         type_='qq',
         Sid_key='songid'
 
-    ),
+    ), MusicPlatform(
+        name='QQ音乐3',
+        url_feature='y.qq.com',
+        model='SPqq',
 
-    kg := MusicPlatform(
+        path=['/n/ryqq/songDetail'],
+        type_='qq',
+        Sid_key=''
+
+    ), ),
+
+
+
+    kg := (MusicPlatform(
         name='酷狗音乐',
         url_feature='kugou.com',
         model='kg',
@@ -53,5 +73,5 @@ MPList = [
         type_=str(),
         Sid_key='hash'
 
-    ),
+    ),)
 ]
