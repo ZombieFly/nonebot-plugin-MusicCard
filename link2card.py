@@ -39,13 +39,11 @@ async def handle(path: str, query: dict, mp: MusicPlatform) -> Union[MessageSegm
     try:
         if (path in mp.path) and (mp.Sid_key in query):
             model = Model(query, mp)
-            ret = await getattr(model, mp.model)()
-            return ret
-
+            return await getattr(model, mp.model)()
         elif path not in mp.path:
             raise NotSongShare(mp.name, '、'.join(mp.path))
 
-        elif mp.Sid_key not in query:
+        else:
             raise NoSongId
 
     except (NotSongShare, NoSongId):

@@ -13,7 +13,7 @@ from .config import Config
 global_config = get_driver().config
 config = Config.parse_obj(global_config)
 
-KEYWORDS = set([mp.url_feature for mp in data.MPList])
+KEYWORDS: set = {mp.url_feature for mp in data.MPList}
 
 INGORE_ACTIONFAILED: bool = config.INGORE_ACTIONFAILED
 
@@ -21,9 +21,10 @@ card = on_keyword(KEYWORDS)
 
 
 def get_url(raw: str) -> list:
-    urls = re.findall(
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', raw.replace(r'/#', '?'))
-    return urls
+    return re.findall(
+        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+        raw.replace(r'/#', '?'),
+    )
 
 
 @card.handle()
