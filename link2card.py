@@ -21,13 +21,15 @@ class Model:
             self.path = path
 
     async def common(self) -> MessageSegment:
+        """通用解析模型"""
         return MessageSegment.music(type_=self.mp.type_, id_=int(self.query[self.mp.Sid_key][0]))
 
     async def SPqq(self) -> MessageSegment:
-
+        """网页版&手机客户端链接解析模型"""
         try:
             split_path = self.path.split('/')
             if (id := split_path[split_path.index('songDetail') + 1]).isnumeric():
+                # 纯数字id直接发送卡片
                 return MessageSegment.music(type_='qq', id_=int(id))
         except ValueError:
             try:
@@ -54,6 +56,7 @@ class Model:
             return MessageSegment.music(type_='qq', id_=int(data['detail']['id']))
 
     async def kg(self) -> MessageSegment:
+        """酷狗音乐解析模型"""
         async with httpx.AsyncClient() as client:
             r = await client.get(f'http://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash={self.query["hash"][0]}')
         contx: dict = r.json()
@@ -70,13 +73,23 @@ class Model:
         )
 
 
-async def handle(path: str, query: dict, mps: tuple[MusicPlatform]) -> Union[MessageSegment, str, None]:
-    for mp in mps:
-        with contextlib.suppress(NextMusicPlatform, ):
-            if (path in mp.path) and (mp.Sid_key in query):
-                model = Model(query, mp)
-                return await getattr(model, mp.model)()
+async def handle(path: str, query: dict, mp: MusicPlatform) -> Union[MessageSegment, None]:
+    """卡片处理
 
-            elif not mp.Sid_key:
-                model = Model(query, mp, path)
-                return await getattr(model, mp.model)()
+    Args:
+        `path` (str): 解析路径
+        `query` (dict): 解析后参数
+        `mp` (MusicPlatform): 音乐平台
+
+    Returns:
+        - 音乐卡片 `MessageSegment`
+        - 无法生成卡片时返回 `None`
+    """
+    with contextlib.suppress(NextMusicPlatform, ):
+        if (path in mp.path) and (mp.Sid_key in query):
+            model = Model(query, mp)
+            return await getattr(model, mp.model)()
+
+        elif not mp.Sid_key:
+            model = Model(query, mp, path)
+            return await getattr(model, mp.model)()
