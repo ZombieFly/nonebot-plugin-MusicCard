@@ -1,14 +1,37 @@
-import contextlib
+from typing import Literal, Callable
+from pydantic import BaseModel
 from typing import Union
-import httpx
 from json import loads
 from re import search
+import contextlib
+import httpx
 
 
 from nonebot.adapters.onebot.v11 import MessageSegment
 
+
 from .exceptions import NextMusicPlatform
 from .data import MusicPlatform
+
+
+QLinkSource = Literal['web', 'client']
+
+
+class QLinkActionAttrs(BaseModel):
+    """qq音乐分享链接解析过程参数
+
+    - source (QLinkSource): 链接来源
+    - pattern (str): 正则表达式
+    - url (str): 请求链接
+
+    """
+
+    source: QLinkSource
+    pattern: str
+    url: str
+
+    get_data: Callable
+    get_Sid: Callable
 
 
 class Model:
@@ -17,15 +40,44 @@ class Model:
     def __init__(self, query: dict, mp: MusicPlatform, path: str = str()) -> None:
         self.query = query
         self.mp = mp
+
         if path:
             self.path = path
+
+    def _set_actions(self, source_opt: QLinkSource) -> None:
+        """设置解析过程参数
+
+        Args:
+            source_opt (QLinkSource): 链接来源
+        """
+        self.QLinkActionAttrs = (QLinkActionAttrs(
+            source='web',
+            pattern=r"window.__INITIAL_DATA__\s*=\s*({.*})",
+            url=f'https://y.qq.com{self.path}',
+            get_data=lambda match: loads(
+                    match.group(1).replace('undefined', '""')),
+            get_Sid=lambda data: int(
+                data['detail']['id']),
+        )
+
+            if source_opt == 'web' else
+
+            QLinkActionAttrs(
+                source='client',
+                pattern=r"window.__ssrFirstPageData__\s*=\s*({.*})<",
+                url=f'https://{self.mp.url_feature}{self.path}?__={self.query["__"][0]}',
+                get_data=lambda match: loads(
+                    match.group(1)),
+                get_Sid=lambda data: int(
+                    data['songList'][0]['id']),
+        ))
 
     async def common(self) -> MessageSegment:
         """通用解析模型"""
         return MessageSegment.music(type_=self.mp.type_, id_=int(self.query[self.mp.Sid_key][0]))
 
     async def SPqq(self) -> MessageSegment:
-        """网页版&手机客户端链接解析模型"""
+        """qq网页版&手机客户端链接解析模型"""
         try:
             split_path = self.path.split('/')
             if (id := split_path[split_path.index('songDetail') + 1]).isnumeric():
@@ -33,27 +85,24 @@ class Model:
                 return MessageSegment.music(type_='qq', id_=int(id))
         except ValueError:
             try:
-                pattern = r"window.__ssrFirstPageData__\s*=\s*({.*})<"
-                url = f'https://{self.mp.url_feature}{self.path}?__={self.query["__"][0]}'
+                self._set_actions('client')
             except KeyError as e:
                 raise NextMusicPlatform(self.mp.name) from e
         else:
-            pattern = r"window.__INITIAL_DATA__\s*=\s*({.*})"
-            url = f'https://y.qq.com{self.path}'
+            self._set_actions('web')
 
+        # 网页请求
         async with httpx.AsyncClient() as client:
-            r = await client.get(url, follow_redirects=True)
+            r = await client.get(self.QLinkActionAttrs.url, follow_redirects=True)
         contx: str = r.text
 
-        if not (match := search(pattern, contx)):
+        if not (match := search(self.QLinkActionAttrs.pattern, contx)):
             raise NextMusicPlatform(self.mp.name)
-        match = match.group(1)
-        try:
-            data = loads(match)
-            return MessageSegment.music(type_='qq', id_=int(data['songList'][0]['id']))
-        except Exception:
-            data = loads(match.replace('undefined', '""'))
-            return MessageSegment.music(type_='qq', id_=int(data['detail']['id']))
+
+        data = self.QLinkActionAttrs.get_data(match)
+        Sid = self.QLinkActionAttrs.get_Sid(data)
+
+        return MessageSegment.music(type_='qq', id_=Sid)
 
     async def kg(self) -> MessageSegment:
         """酷狗音乐解析模型"""

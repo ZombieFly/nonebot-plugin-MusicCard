@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import ParseResult, urlparse, parse_qs
 
 from nonebot import get_driver, on_keyword
 from nonebot.log import logger
@@ -42,6 +42,18 @@ def get_urls(raw: str) -> list[str]:
     )
 
 
+def urls_to_parse(urls: list[str]) -> list[tuple[str, ParseResult]]:
+    """将链接转换为解析结果
+
+    Args:
+        - urls (list[str]): 链接
+
+    Returns:
+        - list[tuple[str, ParseResult]]: 解析结果
+    """
+    return [(url, urlparse(url, allow_fragments=False)) for url in urls]
+
+
 @ card.handle()
 async def _(event: MessageEvent):
 
@@ -50,8 +62,7 @@ async def _(event: MessageEvent):
 
     logger.debug('触发Nonebot-plgin-MusicCard')
     urls = get_urls(event.message.extract_plain_text())
-    for url in urls:
-        parse_result = urlparse(url, allow_fragments=False)
+    for url, parse_result in urls_to_parse(urls):
 
         url_netloc = parse_result.netloc
 
@@ -79,7 +90,7 @@ async def send_out(msCahce: list[MessageSegment], out: MessageSegment):
     if (out not in msCahce):
         try:
             msCahce.append(out)
-            await card.send(out)
+            return await card.send(out)
 
         except ConstructCardException:
             pass
@@ -87,3 +98,5 @@ async def send_out(msCahce: list[MessageSegment], out: MessageSegment):
             # * 忽略ActionFailed报错（可能是由于链接中的id不存在对应的音乐）
             if not INGORE_ACTIONFAILED:
                 raise err
+    else:
+        logger.debug('重复卡片，已忽略')
