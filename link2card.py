@@ -24,6 +24,9 @@ class QLinkActionAttrs(BaseModel):
     - pattern (str): 正则表达式
     - url (str): 请求链接
 
+    - get_data (Callable): 获取数据
+    - get_Sid (Callable): 获取Sid
+
     """
 
     source: QLinkSource
