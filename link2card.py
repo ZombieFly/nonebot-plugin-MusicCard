@@ -79,7 +79,7 @@ class Model:
         """通用解析模型"""
         return MessageSegment.music(type_=self.mp.type_, id_=int(self.query[self.mp.Sid_key][0]))
 
-    async def SPqq(self) -> MessageSegment:
+    async def SPqq(self) -> Union[MessageSegment, None]:
         """qq网页版&手机客户端链接解析模型"""
         try:
             split_path = self.path.split('/')
@@ -105,7 +105,7 @@ class Model:
         data = self.QLinkActionAttrs.get_data(match)
         Sid = self.QLinkActionAttrs.get_Sid(data)
 
-        return MessageSegment.music(type_='qq', id_=Sid)
+        return MessageSegment.music(type_='qq', id_=Sid) if Sid else None
 
     async def kg(self) -> MessageSegment:
         """酷狗音乐解析模型"""
