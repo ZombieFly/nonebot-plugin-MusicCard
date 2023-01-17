@@ -47,34 +47,6 @@ class Model:
         if path:
             self.path = path
 
-    def _set_actions(self, source_opt: QLinkSource) -> None:
-        """设置解析过程参数
-
-        Args:
-            source_opt (QLinkSource): 链接来源
-        """
-        self.QLinkActionAttrs = (QLinkActionAttrs(
-            source='web',
-            pattern=r"window.__INITIAL_DATA__\s*=\s*({.*})",
-            url=f'https://y.qq.com{self.path}',
-            get_data=lambda match: loads(
-                    match.group(1).replace('undefined', '""')),
-            get_Sid=lambda data: int(
-                data['detail']['id']),
-        )
-
-            if source_opt == 'web' else
-
-            QLinkActionAttrs(
-                source='client',
-                pattern=r"window.__ssrFirstPageData__\s*=\s*({.*})<",
-                url=f'https://{self.mp.url_feature}{self.path}?__={self.query["__"][0]}',
-                get_data=lambda match: loads(
-                    match.group(1)),
-                get_Sid=lambda data: int(
-                    data['songList'][0]['id']),
-        ))
-
     async def common(self) -> MessageSegment:
         """通用解析模型"""
         return MessageSegment.music(type_=self.mp.type_, id_=int(self.query[self.mp.Sid_key][0]))
@@ -88,22 +60,22 @@ class Model:
                 return MessageSegment.music(type_='qq', id_=int(id))
         except ValueError:
             try:
-                self._set_actions('client')
+                _QLinkActionAttrs = set_actions(self, 'client')
             except KeyError as e:
                 raise NextMusicPlatform(self.mp.name) from e
         else:
-            self._set_actions('web')
+            _QLinkActionAttrs = set_actions(self, 'web')
 
         # 网页请求
         async with httpx.AsyncClient() as client:
-            r = await client.get(self.QLinkActionAttrs.url, follow_redirects=True)
+            r = await client.get(_QLinkActionAttrs.url, follow_redirects=True)
         contx: str = r.text
 
-        if not (match := search(self.QLinkActionAttrs.pattern, contx)):
+        if not (match := search(_QLinkActionAttrs.pattern, contx)):
             raise NextMusicPlatform(self.mp.name)
 
-        data = self.QLinkActionAttrs.get_data(match)
-        Sid = self.QLinkActionAttrs.get_Sid(data)
+        data = _QLinkActionAttrs.get_data(match)
+        Sid = _QLinkActionAttrs.get_Sid(data)
 
         return MessageSegment.music(type_='qq', id_=Sid) if Sid else None
 
@@ -123,6 +95,35 @@ class Model:
             content='',
             img_url=contx['album_img'].replace('/{size}', '')
         )
+
+
+def set_actions(model: Model, source_opt: QLinkSource) -> QLinkActionAttrs:
+    """设置解析过程参数
+
+    Args:
+        source_opt (QLinkSource): 链接来源
+    """
+    return (QLinkActionAttrs(
+        source='web',
+        pattern=r"window.__INITIAL_DATA__\s*=\s*({.*})",
+        url=f'https://y.qq.com{model.path}',
+        get_data=lambda match: loads(
+                match.group(1).replace('undefined', '""')),
+        get_Sid=lambda data: int(
+            data['detail']['id']),
+    )
+
+        if source_opt == 'web' else
+
+        QLinkActionAttrs(
+            source='client',
+            pattern=r"window.__ssrFirstPageData__\s*=\s*({.*})<",
+            url=f'https://{model.mp.url_feature}{model.path}?__={model.query["__"][0]}',
+            get_data=lambda match: loads(
+                match.group(1)),
+            get_Sid=lambda data: int(
+                data['songList'][0]['id']),
+    ))
 
 
 async def handle(path: str, query: dict, mp: MusicPlatform) -> Union[MessageSegment, None]:
